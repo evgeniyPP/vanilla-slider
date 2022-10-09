@@ -14,11 +14,11 @@ Set `data-slider` to your sliders to init them automatically.
 
 You can configure them also via dataset properties:
 
-- `data-loop="true/false"` to run in a loop (default: `true`);
-- `data-autoplay="true/false"` to swap automatically (default: `false`);
+- `data-loop="<boolean>"` to run in a loop (default: `true`);
+- `data-autoplay="<boolean>"` to swap automatically (default: `false`);
 - `data-interval="<milliseconds>"` to set the autoplay interval (default: `5000`);
-- `data-refresh="true/false"` to reset on resize event (default: `true`);
-- `data-swipe="true/false"` to enable swipe gestures (default: `true`).
+- `data-refresh="<boolean>"` to reset on resize event (default: `true`);
+- `data-swipe="<boolean>"` to enable swipe gestures (default: `true`).
 
 To show more that one item at once, just set `max-width` to them in CSS.
 
