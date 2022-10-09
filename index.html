@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Slider Demo</title>
+    <link rel="stylesheet" href="./slider.css" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./slider.js" defer></script>
+  </head>
+  <body>
+    <main class="slider" data-slider>
+      <div class="slider__container">
+        <div class="slider__items">
+          <div class="slider__item" style="background: red">
+            <!-- Content 1 -->
+          </div>
+          <div class="slider__item" style="background: orange">
+            <!-- Content 2 -->
+          </div>
+          <div class="slider__item" style="background: yellow">
+            <!-- Content 3-->
+          </div>
+          <div class="slider__item" style="background: green">
+            <!-- Content 4 -->
+          </div>
+          <div class="slider__item" style="background: blue">
+            <!-- Content 5 -->
+          </div>
+          <div class="slider__item" style="background: indigo">
+            <!-- Content 6 -->
+          </div>
+          <div class="slider__item" style="background: violet">
+            <!-- Content 7 -->
+          </div>
+        </div>
+      </div>
+
+      <button class="slider__control" data-slide="prev">
+        <span class="sr-only">Go Left</span>
+      </button>
+      <button class="slider__control" data-slide="next">
+        <span class="sr-only">Go Right</span>
+      </button>
+
+      <ol class="slider__indicators">
+        <li class="slider__indicator" data-slide-to="0"></li>
+        <li class="slider__indicator" data-slide-to="1"></li>
+        <li class="slider__indicator" data-slide-to="2"></li>
+        <li class="slider__indicator" data-slide-to="3"></li>
+        <li class="slider__indicator" data-slide-to="4"></li>
+        <li class="slider__indicator" data-slide-to="5"></li>
+        <li class="slider__indicator" data-slide-to="6"></li>
+      </ol>
+    </main>
+  </body>
+</html>
