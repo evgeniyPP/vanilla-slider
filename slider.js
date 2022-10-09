@@ -1,5 +1,5 @@
 class Slider {
-  static ATTRIBUTE = '[data-slider]';
+  static ATTRIBUTE = 'slider';
   static EVENT_NAME = 'slider-start';
   static CLASS_CONTROL = 'slider__control';
   static CLASS_CONTROL_HIDE = 'slider__control_hidden';
@@ -16,16 +16,18 @@ class Slider {
   static instances = [];
 
   static createInstances() {
-    document.querySelectorAll(Slider.ATTRIBUTE).forEach(el => {
+    document.querySelectorAll(`[data-${Slider.ATTRIBUTE}]`).forEach(el => {
+      // if this instance was already inited manually, ignore it
       if (this.instances.find(item => item.el === el)) {
         return;
       }
 
+      // get config values from dataset
       const dataset = el.dataset;
-      const params = {};
+      const config = {};
 
       Object.keys(dataset).forEach(key => {
-        if (key === 'slider') {
+        if (key === Slider.ATTRIBUTE) {
           return;
         }
 
@@ -33,20 +35,18 @@ class Slider {
         value = value === 'true' ? true : value;
         value = value === 'false' ? false : value;
         value = Number.isNaN(+value) ? +value : value;
-        params[key] = value;
+        config[key] = value;
       });
 
-      this.instances.push({ el, slider: new Slider(el, params) });
-
-      el.dataset.sliderId = this.instances.length;
-
-      el.querySelectorAll(Slider._getSelector(Slider.CLASS_CONTROL)).forEach(btn => {
-        btn.dataset.sliderTarget = this.instances.length;
-      });
+      // init this instance
+      const slider = new Slider(el, config);
+      // add this instance to instances array
+      this.instances.push({ el, slider });
     });
   }
 
   constructor(selector, config) {
+    // get DOM elements
     this._sliderEl = typeof selector === 'string' ? document.querySelector(selector) : selector;
     this._containerEl = this._sliderEl.querySelector(Slider._getSelector(Slider.CLASS_CONTAINER));
     this._itemsEl = this._sliderEl.querySelector(Slider._getSelector(Slider.CLASS_ITEMS));
@@ -57,6 +57,7 @@ class Slider {
     this._btnPrev = this._sliderEl.querySelector(Slider._getSelector(Slider.CLASS_PREV));
     this._btnNext = this._sliderEl.querySelector(Slider._getSelector(Slider.CLASS_NEXT));
 
+    // set default values
     this._exOrderMin = 0;
     this._exOrderMax = 0;
     this._exItemMin = null;
@@ -64,16 +65,17 @@ class Slider {
     this._exTranslateMin = 0;
     this._exTranslateMax = 0;
 
-    const styleElItems = window.getComputedStyle(this._itemsEl);
-    this._delay = Math.round(parseFloat(styleElItems.transitionDuration) * 50);
+    const transitionDuration = +window.getComputedStyle(this._itemsEl).transitionDuration;
+    this._delay = Math.round((transitionDuration || 0) * 50);
 
     this._direction = 'next';
 
-    this._intervalId = null;
+    this._autoplayIntervalId = null;
 
     this._isSwiping = false;
     this._swipeX = 0;
 
+    // set config
     this._config = {
       loop: true,
       autoplay: false,
@@ -84,19 +86,20 @@ class Slider {
     };
 
     this._setInitialValues();
-    this._addEventListener();
+    this._addEventListeners();
   }
 
   next() {
-    this._direction = 'next';
-    this._move();
+    this._move('next');
   }
 
   prev() {
-    this._direction = 'prev';
-    this._move();
+    this._move('prev');
   }
 
+  /**
+   * @param {number} index
+   */
   moveTo(index) {
     this._moveTo(index);
   }
@@ -105,28 +108,29 @@ class Slider {
     this._reset();
   }
 
+  /**
+   * @param {string} className
+   */
   static _getSelector(className) {
     return `.${className}`;
   }
 
-  _addEventListener() {
+  _addEventListeners() {
     this._sliderEl.addEventListener('click', e => {
-      this._autoplay('stop');
+      this._stopAutoplay();
 
       if (e.target.classList.contains(Slider.CLASS_CONTROL)) {
         e.preventDefault();
-        this._direction = e.target.dataset.slide;
-        this._move();
+        this._move(e.target.dataset.slide);
       } else if (e.target.dataset.slideTo) {
-        const index = parseInt(e.target.dataset.slideTo, 10);
-        this._moveTo(index);
+        this._moveTo(+e.target.dataset.slideTo);
       }
 
       this._config.loop ? this._autoplay() : null;
     });
 
     this._sliderEl.addEventListener('mouseenter', () => {
-      this._autoplay('stop');
+      this._stopAutoplay();
     });
 
     this._sliderEl.addEventListener('mouseleave', () => {
@@ -144,16 +148,19 @@ class Slider {
         if (this._isBalancing) {
           return;
         }
+
         this._isBalancing = true;
         window.requestAnimationFrame(this._balanceItems.bind(this));
       });
+
       this._itemsEl.addEventListener('transitionend', () => {
         this._isBalancing = false;
       });
     }
 
     const onSwipeStart = e => {
-      this._autoplay('stop');
+      this._stopAutoplay();
+
       const event = e.type.search('touch') === 0 ? e.touches[0] : e;
       this._swipeX = event.clientX;
       this._isSwiping = true;
@@ -168,11 +175,9 @@ class Slider {
       const diffPos = this._swipeX - event.clientX;
 
       if (diffPos > 50) {
-        this._direction = 'next';
-        this._move();
+        this._move('next');
       } else if (diffPos < -50) {
-        this._direction = 'prev';
-        this._move();
+        this._move('prev');
       }
 
       this._isSwiping = false;
@@ -195,30 +200,26 @@ class Slider {
 
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
-        this._autoplay('stop');
+        this._stopAutoplay();
       } else if (document.visibilityState === 'visible' && this._config.loop) {
         this._autoplay();
       }
     });
   }
 
-  _autoplay(action) {
-    if (!this._config.autoplay) {
+  _autoplay() {
+    if (!this._config.autoplay || this._autoplayIntervalId) {
       return;
     }
 
-    if (action === 'stop') {
-      clearInterval(this._intervalId);
-      this._intervalId = null;
-      return;
-    }
+    this._autoplayIntervalId = setInterval(() => {
+      this._move('next');
+    }, this._config.interval);
+  }
 
-    if (this._intervalId === null) {
-      this._intervalId = setInterval(() => {
-        this._direction = 'next';
-        this._move();
-      }, this._config.interval);
-    }
+  _stopAutoplay() {
+    clearInterval(this._autoplayIntervalId);
+    this._autoplayIntervalId = null;
   }
 
   _balanceItems() {
@@ -226,16 +227,16 @@ class Slider {
       return;
     }
 
-    const wrapperRect = this._containerEl.getBoundingClientRect();
-    const targetWidth = wrapperRect.width / this._countActiveItems / 2;
-    const countItems = this._itemEls.length;
+    const containerRect = this._containerEl.getBoundingClientRect();
+    const targetWidth = containerRect.width / this._itemsCount / 2;
+    const itemsCount = this._itemEls.length;
 
     if (this._direction === 'next') {
       const exItemRectRight = this._exItemMin.getBoundingClientRect().right;
 
-      if (exItemRectRight < wrapperRect.left - targetWidth) {
-        this._exItemMin.dataset.order = this._exOrderMin + countItems;
-        const translate = this._exTranslateMin + countItems * this._widthItem;
+      if (exItemRectRight < containerRect.left - targetWidth) {
+        this._exItemMin.dataset.order = this._exOrderMin + itemsCount;
+        const translate = this._exTranslateMin + itemsCount * this._itemWidth;
         this._exItemMin.dataset.translate = translate;
         this._exItemMin.style.transform = `translate3D(${translate}px, 0px, 0.1px)`;
         this._updateExProperties();
@@ -243,9 +244,9 @@ class Slider {
     } else {
       const exItemRectLeft = this._exItemMax.getBoundingClientRect().left;
 
-      if (exItemRectLeft > wrapperRect.right + targetWidth) {
-        this._exItemMax.dataset.order = this._exOrderMax - countItems;
-        const translate = this._exTranslateMax - countItems * this._widthItem;
+      if (exItemRectLeft > containerRect.right + targetWidth) {
+        this._exItemMax.dataset.order = this._exOrderMax - itemsCount;
+        const translate = this._exTranslateMax - itemsCount * this._itemWidth;
         this._exItemMax.dataset.translate = translate;
         this._exItemMax.style.transform = `translate3D(${translate}px, 0px, 0.1px)`;
         this._updateExProperties();
@@ -257,11 +258,12 @@ class Slider {
     }, this._delay);
   }
 
-  _changeActiveItems() {
-    this._stateItems.forEach((item, index) => {
-      const methodName = item ? 'add' : 'remove';
+  _manageActiveClasses() {
+    this._itemsState.forEach((isActive, index) => {
+      const method = isActive ? 'add' : 'remove';
 
-      this._itemEls[index].classList[methodName](Slider.CLASS_ITEM_ACTIVE);
+      // manage item active class
+      this._itemEls[index].classList[method](Slider.CLASS_ITEM_ACTIVE);
 
       if (!this._indicatorEls.length) {
         return;
@@ -274,16 +276,22 @@ class Slider {
         return;
       }
 
-      this._indicatorEls[index].classList[methodName](Slider.CLASS_INDICATOR_ACTIVE);
+      // manage indicator active class
+      this._indicatorEls[index].classList[method](Slider.CLASS_INDICATOR_ACTIVE);
     });
   }
 
-  _move() {
-    const widthItem = this._direction === 'next' ? -this._widthItem : this._widthItem;
+  /**
+   * @param {'prev' | 'next'} direction
+   */
+  _move(direction) {
+    this._direction = direction;
+
+    const widthItem = direction === 'next' ? -this._itemWidth : this._itemWidth;
     const transform = this._transform + widthItem;
 
     if (!this._config.loop) {
-      const limit = this._widthItem * (this._itemEls.length - this._countActiveItems);
+      const limit = this._itemWidth * (this._itemEls.length - this._itemsCount);
 
       if (transform < -limit || transform > 0) {
         return;
@@ -301,52 +309,55 @@ class Slider {
       }
     }
 
-    if (this._direction === 'next') {
-      this._stateItems = [...this._stateItems.slice(-1), ...this._stateItems.slice(0, -1)];
+    if (direction === 'next') {
+      this._itemsState = [...this._itemsState.slice(-1), ...this._itemsState.slice(0, -1)];
     } else {
-      this._stateItems = [...this._stateItems.slice(1), ...this._stateItems.slice(0, 1)];
+      this._itemsState = [...this._itemsState.slice(1), ...this._itemsState.slice(0, 1)];
     }
 
-    this._changeActiveItems();
+    this._manageActiveClasses();
     this._transform = transform;
     this._itemsEl.style.transform = `translate3D(${transform}px, 0px, 0.1px)`;
     this._itemsEl.dispatchEvent(new CustomEvent(Slider.EVENT_NAME, { bubbles: true }));
   }
 
+  /**
+   * @param {number} index
+   */
   _moveTo(index) {
-    const delta = this._stateItems.reduce((acc, current, currentIndex) => {
+    const delta = this._itemsState.reduce((acc, current, currentIndex) => {
       const diff = current ? index - currentIndex : acc;
       return Math.abs(diff) < Math.abs(acc) ? diff : acc;
-    }, this._stateItems.length);
+    }, this._itemsState.length);
 
     if (delta !== 0) {
-      this._direction = delta > 0 ? 'next' : 'prev';
+      const direction = delta > 0 ? 'next' : 'prev';
 
       for (let i = 0; i < Math.abs(delta); i++) {
-        this._move();
+        this._move(direction);
       }
     }
   }
 
   _setInitialValues() {
     this._transform = 0;
-    this._stateItems = [];
+    this._itemsState = [];
     this._isBalancing = false;
-    this._widthItem = this._itemEls[0].getBoundingClientRect().width;
-    this._widthWrapper = this._containerEl.getBoundingClientRect().width;
-    this._countActiveItems = Math.round(this._widthWrapper / this._widthItem);
+    this._itemWidth = this._itemEls[0].getBoundingClientRect().width;
+    const containerWidth = this._containerEl.getBoundingClientRect().width;
+    this._itemsCount = Math.round(containerWidth / this._itemWidth);
 
     this._itemEls.forEach((el, index) => {
       el.dataset.index = index;
       el.dataset.order = index;
       el.dataset.translate = 0;
       el.style.transform = '';
-      this._stateItems.push(index < this._countActiveItems ? 1 : 0);
+      this._itemsState.push(index < this._itemsCount ? 1 : 0);
     });
 
     if (this._config.loop) {
       const lastIndex = this._itemEls.length - 1;
-      const translate = -(lastIndex + 1) * this._widthItem;
+      const translate = -(lastIndex + 1) * this._itemWidth;
       this._itemEls[lastIndex].dataset.order = -1;
       this._itemEls[lastIndex].dataset.translate = translate;
       this._itemEls[lastIndex].style.transform = `translate3D(${translate}px, 0px, 0.1px)`;
@@ -355,20 +366,20 @@ class Slider {
       this._btnPrev.classList.add(Slider.CLASS_CONTROL_HIDE);
     }
 
-    this._changeActiveItems();
+    this._manageActiveClasses();
     this._autoplay();
   }
 
   _reset() {
-    const widthItem = this._itemEls[0].getBoundingClientRect().width;
-    const widthWrapper = this._containerEl.getBoundingClientRect().width;
-    const countActiveEls = Math.round(widthWrapper / widthItem);
+    const itemWidth = this._itemEls[0].getBoundingClientRect().width;
+    const containerWidth = this._containerEl.getBoundingClientRect().width;
+    const itemsCount = Math.round(containerWidth / itemWidth);
 
-    if (widthItem === this._widthItem && countActiveEls === this._countActiveItems) {
+    if (itemWidth === this._itemWidth && itemsCount === this._itemsCount) {
       return;
     }
 
-    this._autoplay('stop');
+    this._stopAutoplay();
     this._itemsEl.classList.add(Slider.CLASS_TRANSITION_OFF);
     this._itemsEl.style.transform = 'translate3D(0px, 0px, 0.1px)';
     this._setInitialValues();
