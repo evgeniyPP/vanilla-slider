@@ -88,7 +88,6 @@
   background-clip: padding-box;
   margin-bottom: 30px;
   cursor: pointer;
-  transition: background 0.1s;
 }
 
 .slider__indicator_active {
