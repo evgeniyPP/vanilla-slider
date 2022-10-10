@@ -51,9 +51,7 @@ class Slider {
     this._containerEl = this._sliderEl.querySelector(Slider._getSelector(Slider.CLASS_CONTAINER));
     this._itemsEl = this._sliderEl.querySelector(Slider._getSelector(Slider.CLASS_ITEMS));
     this._itemEls = this._sliderEl.querySelectorAll(Slider._getSelector(Slider.CLASS_ITEM));
-    this._indicatorEls = this._sliderEl.querySelectorAll(
-      Slider._getSelector(Slider.CLASS_INDICATOR)
-    );
+    this._indicatorEls = this._sliderEl.querySelectorAll(Slider._getSelector(Slider.CLASS_INDICATOR));
     this._btnPrev = this._sliderEl.querySelector(Slider._getSelector(Slider.CLASS_PREV));
     this._btnNext = this._sliderEl.querySelector(Slider._getSelector(Slider.CLASS_NEXT));
 
@@ -82,7 +80,7 @@ class Slider {
       interval: 5000,
       refresh: true,
       swipe: true,
-      ...config
+      ...config,
     };
 
     this._setInitialValues();
