@@ -119,14 +119,21 @@ class Slider {
     this._sliderEl.addEventListener('click', e => {
       this._stopAutoplay();
 
-      if (e.target.classList.contains(Slider.CLASS_CONTROL)) {
+      const isControlBtn = e.target.classList.contains(Slider.CLASS_CONTROL);
+      const isIndicator = !!e.target.dataset.slideTo;
+
+      if (isControlBtn) {
         e.preventDefault();
-        this._move(e.target.dataset.slide);
-      } else if (e.target.dataset.slideTo) {
-        this._moveTo(+e.target.dataset.slideTo);
+        const direction = e.target.dataset.slide;
+        this._move(direction);
+      } else if (isIndicator) {
+        const indicatorIndex = +e.target.dataset.slideTo;
+        this._moveTo(indicatorIndex);
       }
 
-      this._config.loop ? this._autoplay() : null;
+      if (this._config.loop) {
+        this._autoplay();
+      }
     });
 
     this._sliderEl.addEventListener('mouseenter', () => {
@@ -158,36 +165,36 @@ class Slider {
       });
     }
 
-    const onSwipeStart = e => {
-      this._stopAutoplay();
-
-      const event = e.type.search('touch') === 0 ? e.touches[0] : e;
-      this._swipeX = event.clientX;
-      this._isSwiping = true;
-    };
-
-    const onSwipeEnd = e => {
-      if (!this._isSwiping) {
-        return;
-      }
-
-      const event = e.type.search('touch') === 0 ? e.changedTouches[0] : e;
-      const diffPos = this._swipeX - event.clientX;
-
-      if (diffPos > 50) {
-        this._move('next');
-      } else if (diffPos < -50) {
-        this._move('prev');
-      }
-
-      this._isSwiping = false;
-
-      if (this._config.loop) {
-        this._autoplay();
-      }
-    };
-
     if (this._config.swipe) {
+      const onSwipeStart = e => {
+        this._stopAutoplay();
+
+        const event = e.type.search('touch') === 0 ? e.touches[0] : e;
+        this._swipeX = event.clientX;
+        this._isSwiping = true;
+      };
+
+      const onSwipeEnd = e => {
+        if (!this._isSwiping) {
+          return;
+        }
+
+        const event = e.type.search('touch') === 0 ? e.changedTouches[0] : e;
+        const diffPos = this._swipeX - event.clientX;
+
+        if (diffPos > 50) {
+          this._move('next');
+        } else if (diffPos < -50) {
+          this._move('prev');
+        }
+
+        this._isSwiping = false;
+
+        if (this._config.loop) {
+          this._autoplay();
+        }
+      };
+
       this._sliderEl.addEventListener('touchstart', onSwipeStart);
       this._sliderEl.addEventListener('mousedown', onSwipeStart);
       document.addEventListener('touchend', onSwipeEnd);
