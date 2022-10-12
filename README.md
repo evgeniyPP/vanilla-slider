@@ -22,6 +22,8 @@ You can configure them also via dataset properties:
 
 To show more that one item at once, just set `max-width` to them in CSS.
 
+If you are using controls and/or indicators, do not forget to add not only classes but also dataset values (see `index.html`).
+
 ### Manual Init
 
 `new Slider(el, config)`
