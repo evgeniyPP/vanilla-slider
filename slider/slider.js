@@ -68,6 +68,7 @@ class Slider {
 
     this._direction = 'next';
 
+    this._isVisible = false;
     this._autoplayIntervalId = null;
 
     this._isSwiping = false;
@@ -218,7 +219,9 @@ class Slider {
     }
 
     this._autoplayIntervalId = setInterval(() => {
-      this._move('next');
+      if (this._isVisible) {
+        this._move('next');
+      }
     }, this._config.interval);
   }
 
@@ -284,6 +287,21 @@ class Slider {
       // manage indicator active class
       this._indicatorEls[index].classList[method](Slider.CLASS_INDICATOR_ACTIVE);
     });
+  }
+
+  _manageVisibility() {
+    if (!('IntersectionObserver' in window)) {
+      this._isVisible = true;
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      entries => {
+        this._isVisible = entries[0].isIntersecting;
+      },
+      { threshold: 1 }
+    );
+    observer.observe(this._sliderEl);
   }
 
   /**
@@ -372,6 +390,7 @@ class Slider {
     }
 
     this._manageActiveClasses();
+    this._manageVisibility();
     this._autoplay();
   }
 
